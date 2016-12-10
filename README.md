@@ -1,6 +1,7 @@
 # StacieEmu
 Stacie Emulator for the PEGASUS Cubesat project
 
+This application is a simple QT-App that simulates the behavior of the Stacie module.
 
 ### Build on Windows
 
