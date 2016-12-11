@@ -261,7 +261,7 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
 
 void MainWindow::writeDataTTC1(const QByteArray &data)
 {
-    QString infoLine = WriteDescription(data,false);
+    QString infoLine = WriteDescription(data,true);
     ui->ttc1Console->putString(infoLine);
     ui->ttc1Console->putData(data);
     ui->ttc1Console->putString("\n");
@@ -273,7 +273,7 @@ void MainWindow::readDataTTC1()
 {
     QByteArray data = serialttc1->readAll();
 
-    QString  infoLine = WriteDescription(data,true);
+    QString  infoLine = WriteDescription(data,false);
     ui->ttc1Console->putString(QString(infoLine));
     ui->ttc1Console->putData(data);
     ui->ttc1Console->putString("\n");
@@ -291,7 +291,7 @@ void MainWindow::handleErrorTTC1(QSerialPort::SerialPortError error)
 
 void MainWindow::writeDataTTC2(const QByteArray &data)
 {
-    QString infoLine = WriteDescription(data,false);
+    QString infoLine = WriteDescription(data,true);
     ui->ttc2Console->putString(infoLine);
     ui->ttc2Console->putData(data);
     ui->ttc2Console->putString("\n");
@@ -303,7 +303,7 @@ void MainWindow::readDataTTC2()
 {
     QByteArray data = serialttc2->readAll();
 
-    QString  infoLine = WriteDescription(data,true);
+    QString  infoLine = WriteDescription(data,false);
     ui->ttc2Console->putString(QString(infoLine));
     ui->ttc2Console->putData(data);
     ui->ttc2Console->putString("\n");
