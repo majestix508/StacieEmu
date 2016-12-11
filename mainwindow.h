@@ -59,6 +59,17 @@ private slots:
     void handleErrorGPS(QSerialPort::SerialPortError error);
 
     void sendQuickCommand();
+    void selectCustomFile();
+    void sendCustomCommand();
+    void ClearFileButton();
+    void clearConsoles();
+    void ClearTTC1();
+    void ClearTTC2();
+    void ClearGPS();
+
+    void saveTTC1toFile();
+    void saveTTC2toFile();
+    void saveGPStoFile();
 
 private:
 
@@ -78,6 +89,8 @@ private:
     QSerialPort *serialttc1;
     QSerialPort *serialttc2;
     QSerialPort *serialgps;
+
+    QByteArray filecontent;
 };
 
 #endif // MAINWINDOW_H

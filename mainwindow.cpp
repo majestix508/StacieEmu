@@ -5,6 +5,8 @@
 #include <QMessageBox>
 #include <QLabel>
 #include <QtSerialPort/QSerialPort>
+#include <QFileDialog>
+#include <QTextStream>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -20,6 +22,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     status = new QLabel;
     ui->statusBar->addWidget(status);
+
+    filecontent.clear();
+    ui->cFileLbl->clear();
+    ui->clearFileBtn->hide();
 
     initActionsConnections();
 
@@ -44,6 +50,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->gpsConsole, &Console::getData, this, &MainWindow::writeDataGPS);
 
     connect(ui->quickButton, &QPushButton::clicked,this, &MainWindow::sendQuickCommand);
+    connect(ui->cSend, &QPushButton::clicked,this, &MainWindow::sendCustomCommand);
+
+
+    connect(ui->cFileBtn, &QPushButton::clicked,this, &MainWindow::selectCustomFile);
+    connect(ui->clearFileBtn, &QPushButton::clicked,this, &MainWindow::ClearFileButton);
 }
 
 MainWindow::~MainWindow()
@@ -180,6 +191,22 @@ void MainWindow::initActionsConnections()
     connect(ui->actionDisconnect, &QAction::triggered, this, &MainWindow::closeSerialPort);
     connect(ui->actionSettings, &QAction::triggered, settings, &SettingsDialog::show);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
+    connect(ui->actionClear, &QAction::triggered, this, &MainWindow::clearConsoles);
+
+    connect(ui->actionClear_TTC1, &QAction::triggered, this, &MainWindow::ClearTTC1);
+    connect(ui->actionClear_TTC2, &QAction::triggered, this, &MainWindow::ClearTTC2);
+    connect(ui->actionClear_GPS, &QAction::triggered, this, &MainWindow::ClearGPS);
+
+    connect(ui->actionSave_TTC1, &QAction::triggered, this, &MainWindow::saveTTC1toFile);
+    connect(ui->actionSave_TTC2, &QAction::triggered, this, &MainWindow::saveTTC2toFile);
+    connect(ui->actionSave_GPS, &QAction::triggered, this, &MainWindow::saveGPStoFile);
+
+}
+
+void MainWindow::clearConsoles(){
+    ui->ttc1Console->clear();
+    ui->ttc2Console->clear();
+    ui->gpsConsole->clear();
 }
 
 void MainWindow::showStatusMessage(const QString &message)
@@ -264,13 +291,22 @@ void MainWindow::handleErrorTTC1(QSerialPort::SerialPortError error)
 
 void MainWindow::writeDataTTC2(const QByteArray &data)
 {
+    QString infoLine = WriteDescription(data,false);
+    ui->ttc2Console->putString(infoLine);
+    ui->ttc2Console->putData(data);
+    ui->ttc2Console->putString("\n");
+
     serialttc2->write(data);
 }
 
 void MainWindow::readDataTTC2()
 {
     QByteArray data = serialttc2->readAll();
+
+    QString  infoLine = WriteDescription(data,true);
+    ui->ttc2Console->putString(QString(infoLine));
     ui->ttc2Console->putData(data);
+    ui->ttc2Console->putString("\n");
 }
 
 void MainWindow::handleErrorTTC2(QSerialPort::SerialPortError error)
@@ -311,8 +347,8 @@ void MainWindow::sendQuickCommand() {
     if (selectedText == "STATUS TEST") {
         data.append(TTC_OP_GETSTATUS);
         data.append(TTC_ACTION_EXEC);
-        data.append(0xFF);
-        char test=0xFF;
+        data.append((char)0xFF);
+        char test=(char)0xFF;
         uint8_t crc = this->CRC8((unsigned char*)&test,1);
         data.append((char)crc);
     }
@@ -328,6 +364,143 @@ void MainWindow::sendQuickCommand() {
 
     return;
 }
+void MainWindow::sendCustomCommand() {
+    QByteArray data;
+
+    QString Command = ui->cmdBox->currentText();
+    QString Action = ui->actionBox->currentText();
+
+    if (Command == "TRANSMIT"){
+        data.append((char)TTC_OP_TRANSMIT);
+    }
+    else if (Command == "RECEIVE") {
+        data.append((char)TTC_OP_RECEIVE);
+    }
+    else if (Command == "GETSTATUS (debug)"){
+        data.append((char)TTC_OP_GETSTATUS);
+    }
+    else if (Command == "OPMODE"){
+        data.append((char)TTC_OP_OPMODE);
+    }
+    else if (Command == "GETTELEMETRY"){
+        data.append((char)TTC_OP_GETTELEMETRY);
+    }
+
+    if (Action == "ACK"){
+        data.append((char)TTC_ACTION_ACK);
+    }
+    else if (Action == "EXEC"){
+        data.append((char)TTC_ACTION_EXEC);
+    }
+    else if (Action == "NACK"){
+        data.append((char)TTC_ACTION_NACK);
+    }
+
+    if (filecontent.size()){
+        data.append(filecontent);
+
+        //Calc CRC
+        const char* mychar = filecontent.data();
+        uint8_t crc = CRC8((uint8_t *)mychar,filecontent.size());
+        data.append((char)crc);
+    }
+
+    if (serialttc1->isOpen()){
+        writeDataTTC1(data);
+    }
+
+    if (serialttc2->isOpen()){
+        writeDataTTC2(data);
+    }
+
+}
+
+void MainWindow::selectCustomFile() {
+
+    QString path = QFileDialog::getOpenFileName(this,tr("File"));
+    if ( path.isNull() == false )
+    {
+        filecontent.clear();
+        ui->cFileLbl->clear();
+
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) return;
+        filecontent = file.readAll();
+
+        //TODO - check filesize not bigger than 49 bytes!!! Stacie packet size!!
+
+        //Now set the label to the path!
+        if (path.size() > 20){
+            QString small = tr("...")+path.right(20);
+            ui->cFileLbl->setText(small);
+        }
+        else {
+            ui->cFileLbl->setText(path);
+        }
+
+        ui->clearFileBtn->show();
+        //For test - output content of file in ttc1 console!
+        //ui->ttc1Console->putString(QString(filecontent));
+    }
+}
+
+void MainWindow::saveTTC1toFile () {
+    QString path = QFileDialog::getSaveFileName(this,"File");
+    if (path.isNull() == false){
+        QString content = ui->ttc1Console->toPlainText();
+        QFile file (path);
+        if (file.open(QIODevice::ReadWrite)) {
+            QTextStream stream(&file);
+            stream << content;
+            file.close();
+        }
+    }
+}
+
+void MainWindow::saveTTC2toFile () {
+    QString path = QFileDialog::getSaveFileName(this,"File");
+    if (path.isNull() == false){
+        QString content = ui->ttc2Console->toPlainText();
+        QFile file (path);
+        if (file.open(QIODevice::ReadWrite)) {
+            QTextStream stream(&file);
+            stream << content;
+            file.close();
+        }
+    }
+}
+
+void MainWindow::saveGPStoFile () {
+    QString path = QFileDialog::getSaveFileName(this,"File");
+    if (path.isNull() == false){
+        QString content = ui->gpsConsole->toPlainText();
+        QFile file (path);
+        if (file.open(QIODevice::ReadWrite)) {
+            QTextStream stream(&file);
+            stream << content;
+            file.close();
+        }
+    }
+}
+
+void MainWindow::ClearFileButton() {
+    filecontent.clear();
+    ui->cFileLbl->clear();
+    ui->clearFileBtn->hide();
+}
+
+void MainWindow::ClearTTC1(){
+    ui->ttc1Console->clear();
+}
+
+void MainWindow::ClearTTC2(){
+    ui->ttc2Console->clear();
+}
+
+void MainWindow::ClearGPS(){
+    ui->gpsConsole->clear();
+}
+
 
 /* Update CRC8 Checksum */
 void MainWindow::c_CRC8(char data, uint8_t *checksum)
