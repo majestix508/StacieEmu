@@ -55,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->cFileBtn, &QPushButton::clicked,this, &MainWindow::selectCustomFile);
     connect(ui->clearFileBtn, &QPushButton::clicked,this, &MainWindow::ClearFileButton);
+    connect(ui->gpsSendButton, &QPushButton::clicked,this, &MainWindow::sendGPSCommand);
 }
 
 MainWindow::~MainWindow()
@@ -277,6 +278,8 @@ void MainWindow::readDataTTC1()
     ui->ttc1Console->putString(QString(infoLine));
     ui->ttc1Console->putData(data);
     ui->ttc1Console->putString("\n");
+
+    autorespondToCommands(data,TTC1);
 }
 
 void MainWindow::handleErrorTTC1(QSerialPort::SerialPortError error)
@@ -307,6 +310,8 @@ void MainWindow::readDataTTC2()
     ui->ttc2Console->putString(QString(infoLine));
     ui->ttc2Console->putData(data);
     ui->ttc2Console->putString("\n");
+
+    autorespondToCommands(data,TTC2);
 }
 
 void MainWindow::handleErrorTTC2(QSerialPort::SerialPortError error)
@@ -322,6 +327,10 @@ void MainWindow::handleErrorTTC2(QSerialPort::SerialPortError error)
 void MainWindow::writeDataGPS(const QByteArray &data)
 {
     serialgps->write(data);
+
+    ui->gpsConsole->putString("Command: ");
+    ui->gpsConsole->putData(data);
+    ui->gpsConsole->putString("\n");
 }
 
 void MainWindow::readDataGPS()
@@ -413,6 +422,15 @@ void MainWindow::sendCustomCommand() {
         writeDataTTC2(data);
     }
 
+}
+
+void MainWindow::sendGPSCommand() {
+    QString Command = ui->gpsInputText->text();
+    QByteArray data;
+    data.append(Command);
+    writeDataGPS(data);
+
+    ui->gpsInputText->clear();
 }
 
 void MainWindow::selectCustomFile() {
@@ -525,4 +543,85 @@ uint8_t MainWindow::CRC8(uint8_t* str, size_t length)
     return checksum;
 }
 
+void MainWindow::autorespondToCommands(QByteArray data,Uart name){
 
+    SettingsDialog::Settings p = settings->settings();
+
+    if (!p.telemetry_awnser){
+        return;
+    }
+
+    int index=0;
+    while(index<data.size()){
+
+        if (data[index] == (char)TTC_OP_GETTELEMETRY){
+            if (data.size() >= index+4 && data[index+1] == (char)TTC_ACTION_EXEC){
+                char recordId = data[index+2];
+                char crc = data[index+3];
+
+                //Check Crc
+                uint8_t mycrc = CRC8((uint8_t*)&crc,1);
+                if (crc != mycrc){
+                    //TODO - send NACK?
+                }
+
+                QByteArray responseData;
+                responseData.append((char)TTC_OP_GETTELEMETRY);
+                responseData.append((char)TTC_ACTION_ACK);
+                responseData.append(recordId);
+
+                //TODO - maybe we need the recordId also for CRC8???
+                char l_payload[4];
+                int l_size=0;
+
+                if (recordId == GT_TRX1_TMP){
+                    l_payload[0] = (char)60;
+                    l_size = 1;
+                }
+                else if (recordId == GT_TRX2_TMP){
+                    l_payload[0] = (char)50;
+                    l_size = 1;
+                }
+                else if (recordId == GT_TRX2_TMP){
+                    uint16_t rcntA = 40;
+                    uint16_t rcntB = 35;
+                    l_payload[0] = (char)(rcntA>>8); //upper
+                    l_payload[1] = (char)rcntA; //lower
+                    l_payload[2] = (char)(rcntB>>8); // upper
+                    l_payload[3] = (char)rcntB; //lower
+                    l_size = 4;
+                }
+                else if (recordId == GT_TRX2_TMP){
+                    l_payload[0] = (char)30;
+                    l_size = 1;
+                }
+                else if (recordId == GT_TRX2_TMP){
+                    l_payload[0] = (char)20;
+                    l_payload[1] = (char)10;
+                    l_size = 2;
+                }
+
+                uint8_t newcrc = CRC8((uint8_t*)l_payload,l_size);
+
+                responseData.append(l_payload,l_size);
+                responseData.append(newcrc);
+
+                if (name == TTC1){
+                    writeDataTTC1(responseData);
+                }
+                else if (name == TTC2){
+                    writeDataTTC2(responseData);
+                }
+                else if (name == GPS) {
+                    writeDataGPS(responseData);
+                }
+
+                index +=4; //set to next position
+                continue;
+            }
+        }
+
+        index++;
+    }
+    return;
+}

@@ -19,6 +19,7 @@ public:
         QString ttc1_name;
         QString ttc2_name;
         QString gps_name;
+        bool    telemetry_awnser;
     };
 
     void apply();

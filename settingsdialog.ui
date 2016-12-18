@@ -188,6 +188,33 @@
     </item>
    </layout>
   </widget>
+  <widget class="QGroupBox" name="groupBox_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>230</y>
+     <width>231</width>
+     <height>221</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>GetTelemetry</string>
+   </property>
+   <widget class="QCheckBox" name="TelemetrycheckBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>221</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Automatically awnser 
+GETTELEMETRY Requests</string>
+    </property>
+   </widget>
+  </widget>
  </widget>
  <resources/>
  <connections/>

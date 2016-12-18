@@ -17,7 +17,16 @@
 #define TTC_ACTION_EXEC  0x4B
 #define TTC_ACTION_NACK  0x7F
 
+//GetTelemetry (OBC from TTC) RecordIds
+#define GT_TRX1_TMP  0x01
+#define GT_TRX2_TMP  0x02
+#define GT_RST_COUNT 0x03
+#define GT_TEMP      0x04
+#define GETT_STATUS    0x05
+
 QT_BEGIN_NAMESPACE
+
+enum Uart { TTC1, TTC2, GPS};
 
 class QLabel;
 
@@ -61,6 +70,7 @@ private slots:
     void sendQuickCommand();
     void selectCustomFile();
     void sendCustomCommand();
+    void sendGPSCommand();
     void ClearFileButton();
     void clearConsoles();
     void ClearTTC1();
@@ -70,6 +80,8 @@ private slots:
     void saveTTC1toFile();
     void saveTTC2toFile();
     void saveGPStoFile();
+
+    void autorespondToCommands(QByteArray data, Uart name);
 
 private:
 

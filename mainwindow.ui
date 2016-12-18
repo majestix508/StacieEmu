@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1131</width>
-    <height>613</height>
+    <height>596</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -234,6 +234,20 @@
       </item>
      </layout>
     </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLineEdit" name="gpsInputText"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="gpsSendButton">
+        <property name="text">
+         <string>GPS Send</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -242,7 +256,7 @@
      <x>0</x>
      <y>0</y>
      <width>1131</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuDatei">

@@ -94,6 +94,7 @@ void SettingsDialog::updateSettings()
     currentSettings.ttc1_name = ui->ttc1Box->currentText();
     currentSettings.ttc2_name = ui->ttc2Box->currentText();
     currentSettings.gps_name = ui->gpsBox->currentText();
+    currentSettings.telemetry_awnser = (ui->TelemetrycheckBox->checkState() == Qt::Checked)?true:false;
 
 }
 
@@ -121,6 +122,10 @@ void SettingsDialog::show()
         if ( index != -1 ) { // -1 for not found
            ui->gpsBox->setCurrentIndex(index);
         }
+    }
+
+    if (this->settings().telemetry_awnser == true){
+        ui->TelemetrycheckBox->setCheckState(Qt::Checked);
     }
 
 }
