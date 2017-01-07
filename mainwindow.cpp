@@ -219,30 +219,37 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
 {
     QString cmdId;
     QString actionId;
-    if (data[0] == (char)TTC_OP_TRANSMIT){
-        cmdId = "TRANSMIT";
-    }
-    else if (data[0] == (char)TTC_OP_GETSTATUS){
-        cmdId = "GETSTATUS";
-    }
-    else if (data[0] == (char)TTC_OP_RECEIVE){
-        cmdId = "RECEIVE";
-    }
-    else if (data[0] == (char)TTC_OP_OPMODE){
-        cmdId = "OPMODE";
-    }
-    else if (data[0] == (char)TTC_OP_GETTELEMETRY){
-        cmdId = "GETTELEMETRY";
-    }
 
-    if (data[1] == (char)TTC_ACTION_ACK){
-        actionId="ACK";
+    if (data.size() <2){
+        cmdId = "Invalid";
+        actionId = "Sequence";
     }
-    else if (data[1] == (char)TTC_ACTION_EXEC){
-        actionId="EXEC";
-    }
-    else if (data[1] == (char)TTC_ACTION_NACK){
-        actionId="NACK";
+    else {
+        if (data[0] == (char)TTC_OP_TRANSMIT){
+            cmdId = "TRANSMIT";
+        }
+        else if (data[0] == (char)TTC_OP_GETSTATUS){
+            cmdId = "GETSTATUS";
+        }
+        else if (data[0] == (char)TTC_OP_RECEIVE){
+            cmdId = "RECEIVE";
+        }
+        else if (data[0] == (char)TTC_OP_OPMODE){
+            cmdId = "OPMODE";
+        }
+        else if (data[0] == (char)TTC_OP_GETTELEMETRY){
+            cmdId = "GETTELEMETRY";
+        }
+
+        if (data[1] == (char)TTC_ACTION_ACK){
+            actionId="ACK";
+        }
+        else if (data[1] == (char)TTC_ACTION_EXEC){
+            actionId="EXEC";
+        }
+        else if (data[1] == (char)TTC_ACTION_NACK){
+            actionId="NACK";
+        }
     }
 
     QString result;
@@ -428,6 +435,7 @@ void MainWindow::sendGPSCommand() {
     QString Command = ui->gpsInputText->text();
     QByteArray data;
     data.append(Command);
+    data.append('\r');
     writeDataGPS(data);
 
     ui->gpsInputText->clear();
