@@ -56,6 +56,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->cFileBtn, &QPushButton::clicked,this, &MainWindow::selectCustomFile);
     connect(ui->clearFileBtn, &QPushButton::clicked,this, &MainWindow::ClearFileButton);
     connect(ui->gpsSendButton, &QPushButton::clicked,this, &MainWindow::sendGPSCommand);
+
+    connect(ui->uploadscriptButton, &QPushButton::clicked,this, &MainWindow::uploadScript);
+
 }
 
 MainWindow::~MainWindow()
@@ -228,9 +231,6 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
         if (data[0] == (char)TTC_OP_TRANSMIT){
             cmdId = "TRANSMIT";
         }
-        else if (data[0] == (char)TTC_OP_GETSTATUS){
-            cmdId = "GETSTATUS";
-        }
         else if (data[0] == (char)TTC_OP_RECEIVE){
             cmdId = "RECEIVE";
         }
@@ -360,6 +360,7 @@ void MainWindow::sendQuickCommand() {
 
     QByteArray data;
 
+    //TODO remove status_test
     if (selectedText == "STATUS TEST") {
         data.append(TTC_OP_GETSTATUS);
         data.append(TTC_ACTION_EXEC);
@@ -380,6 +381,114 @@ void MainWindow::sendQuickCommand() {
 
     return;
 }
+
+void MainWindow::uploadScript() {
+
+    QString path = QFileDialog::getOpenFileName(this,tr("File"));
+    if ( path.isNull() == false )
+    {
+        QByteArray content;
+
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) return;
+        content = file.readAll();
+        file.close();
+
+        //Stacie Packetaufbau:
+        //<cmd><action><pid><destination><packageNum><raw-data><crc8>
+        //RECEIVE,EXEC,0x00(ignored),0x01(sciencescript),(1-x letztes 0xFF),{1. Packet hat slot am Anfang!}daten,CRC8 1byte
+
+        QByteArray package;
+        uint8_t i = 1;
+        int index=0;
+        bool first_run=true;
+        int rest = (content.size()+1) % 43; //+1 = scriptslot!
+        int packages = (content.size()+1) / 43; //+1 = scriptslot!
+
+        while(true){
+
+            package.clear();
+            package.append((char)0x1E); //RECEIVE
+            package.append((char)0x4B); //EXEC
+            package.append((char)0xFF); //PID
+            package.append((char)0x01); //destination -> science script
+            if (i == packages && rest==0){
+                //last full package
+                package.append((char)0xFF);
+            }
+            else {
+                package.append((char)i);
+            }
+
+            int payload=43;
+
+            if (first_run){
+                package.append((char)0x01); //Script Slot 1
+                first_run=false;
+                payload=42;
+            }
+
+            for(int x=0; x<payload;x++){
+                package.append(content[index+x]);
+            }
+
+            //Calc CRC
+            const char* mychar = package.data();
+            mychar+=2; //so the pointer points to pid
+            uint8_t crc = CRC8((uint8_t *)mychar,43);
+            package.append((char)crc);
+
+            //Send to TTC1 only!
+            //if (serialttc1->isOpen()){
+            //    writeDataTTC1(package);
+            //}
+            ui->ttc1Console->putData(package);
+
+            index+=payload;
+
+            if (i == packages){
+                break;
+            }
+
+            i++; //pkg_count
+        }
+
+        //Now add the last package if there is one
+        if (rest>0){
+            package.clear();
+            package.append((char)0x1E); //RECEIVE
+            package.append((char)0x4B); //EXEC
+            package.append((char)0xFF); //PID
+            package.append((char)0x01); //destination -> science script
+            package.append((char)0xFF); //last Package
+
+            //TODO -> stacie weiß nun nicht wo das letzte Packet aufhört im OBC-Code!!
+            for(int y =0; y<43;y++){
+                if (y<rest){
+                    package.append(content[index+y]);
+                }
+                else { //packet auffüllen
+                    package.append((char)0x55);
+                }
+            }
+
+            //Calc CRC
+            const char* mychar = package.data();
+            mychar+=2; //so the pointer points to pid
+            uint8_t crc = CRC8((uint8_t *)mychar,43);
+            package.append((char)crc);
+
+            //Send to TTC1 only!
+            //if (serialttc1->isOpen()){
+            //    writeDataTTC1(package);
+            //}
+            ui->ttc1Console->putData(package);
+
+        }
+
+    }
+}
+
 void MainWindow::sendCustomCommand() {
     QByteArray data;
 
@@ -391,9 +500,6 @@ void MainWindow::sendCustomCommand() {
     }
     else if (Command == "RECEIVE") {
         data.append((char)TTC_OP_RECEIVE);
-    }
-    else if (Command == "GETSTATUS (debug)"){
-        data.append((char)TTC_OP_GETSTATUS);
     }
     else if (Command == "OPMODE"){
         data.append((char)TTC_OP_OPMODE);
@@ -452,7 +558,7 @@ void MainWindow::selectCustomFile() {
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly)) return;
         filecontent = file.readAll();
-
+        file.close();
         //TODO - check filesize not bigger than 49 bytes!!! Stacie packet size!!
 
         //Now set the label to the path!

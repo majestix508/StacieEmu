@@ -76,7 +76,7 @@ private slots:
     void ClearTTC1();
     void ClearTTC2();
     void ClearGPS();
-
+    void uploadScript();
     void saveTTC1toFile();
     void saveTTC2toFile();
     void saveGPStoFile();

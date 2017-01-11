@@ -65,10 +65,10 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_11">
+        <item row="3" column="1">
+         <widget class="QPushButton" name="cFileBtn">
           <property name="text">
-           <string/>
+           <string>Select File</string>
           </property>
          </widget>
         </item>
@@ -107,28 +107,37 @@
             <string>GETTELEMETRY</string>
            </property>
           </item>
-          <item>
-           <property name="text">
-            <string>GETSTATUS (debug)</string>
-           </property>
-          </item>
          </widget>
         </item>
-        <item row="9" column="1">
+        <item row="10" column="1">
          <widget class="QLabel" name="label_12">
           <property name="text">
            <string/>
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
-         <widget class="QPushButton" name="cFileBtn">
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_11">
           <property name="text">
-           <string>Select File</string>
+           <string/>
           </property>
          </widget>
         </item>
-        <item row="11" column="1">
+        <item row="5" column="1">
+         <widget class="QLabel" name="cFileLbl">
+          <property name="text">
+           <string>Filename</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Action:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="1">
          <widget class="QPushButton" name="quickButton">
           <property name="text">
            <string>Send</string>
@@ -139,13 +148,6 @@
          <widget class="QPushButton" name="cSend">
           <property name="text">
            <string>Send</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QLabel" name="cFileLbl">
-          <property name="text">
-           <string>Filename</string>
           </property>
          </widget>
         </item>
@@ -168,14 +170,7 @@
           </item>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Action:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0">
+        <item row="11" column="0">
          <widget class="QLabel" name="label_8">
           <property name="font">
            <font>
@@ -188,7 +183,7 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="0">
+        <item row="12" column="0">
          <widget class="QComboBox" name="quickBox">
           <item>
            <property name="text">
@@ -201,6 +196,13 @@
          <widget class="QPushButton" name="clearFileBtn">
           <property name="text">
            <string>Clear file</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="1">
+         <widget class="QPushButton" name="uploadscriptButton">
+          <property name="text">
+           <string>Upload Script</string>
           </property>
          </widget>
         </item>
@@ -256,7 +258,7 @@
      <x>0</x>
      <y>0</y>
      <width>1131</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuDatei">
