@@ -765,7 +765,7 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
 //                    l_payload[1] = (char)10;
 //                    l_size = 2;
 //                }
-                else if (recordId = GT_RSSI){
+                else if (recordId == GT_RSSI){
                     l_payload[1] = (char)20;
                     l_payload[2] = (char)10;
                     l_size = 3;
