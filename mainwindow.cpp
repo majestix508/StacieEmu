@@ -7,6 +7,15 @@
 #include <QtSerialPort/QSerialPort>
 #include <QFileDialog>
 #include <QTextStream>
+#include <QTime>
+
+//helper function for a sleep without blocking the threads!
+void delay(int sec)
+{
+    QTime dieTime= QTime::currentTime().addSecs(sec);
+    while (QTime::currentTime() < dieTime)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -59,6 +68,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->uploadscriptButton, &QPushButton::clicked,this, &MainWindow::uploadScript);
 
+    ttc1_inprogress=false;
 }
 
 MainWindow::~MainWindow()
@@ -269,16 +279,29 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
 
 void MainWindow::writeDataTTC1(const QByteArray &data)
 {
+    while (ttc1_inprogress){
+        delay(1);
+    }
+
+    ttc1_inprogress=true;
+
     QString infoLine = WriteDescription(data,true);
     ui->ttc1Console->putString(infoLine);
     ui->ttc1Console->putData(data);
     ui->ttc1Console->putString("\n");
 
     serialttc1->write(data);
+
+    ttc1_inprogress=false;
 }
 
 void MainWindow::readDataTTC1()
 {
+    while (ttc1_inprogress){
+        delay(1);
+    }
+
+    ttc1_inprogress=true;
     QByteArray data = serialttc1->readAll();
 
     QString  infoLine = WriteDescription(data,false);
@@ -287,6 +310,8 @@ void MainWindow::readDataTTC1()
     ui->ttc1Console->putString("\n");
 
     autorespondToCommands(data,TTC1);
+
+    ttc1_inprogress=false;
 }
 
 void MainWindow::handleErrorTTC1(QSerialPort::SerialPortError error)
@@ -361,23 +386,44 @@ void MainWindow::sendQuickCommand() {
     QByteArray data;
 
     //TODO remove status_test
-    if (selectedText == "STATUS TEST") {
-        data.append(TTC_OP_GETSTATUS);
-        data.append(TTC_ACTION_EXEC);
-        data.append((char)0xFF);
-        char test=(char)0xFF;
-        uint8_t crc = this->CRC8((unsigned char*)&test,1);
-        data.append((char)crc);
+    if (selectedText == "GPS Show Loggerinfo") {
+        data = "$C,10003,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
     }
-    //TODO -> other quick commands!
+    else if (selectedText == "GPS Show last wod"){
+        data = "$C,10006,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Erase Flash"){
+        data = "$C,10007,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Info"){
+        data = "$C,10004,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot1"){
+        data = "$C,10004,1,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
 
-    if (serialttc1->isOpen()){
-        writeDataTTC1(data);
-    }
+//    if (serialttc1->isOpen()){
+//        writeDataTTC1(data);
+//    }
 
-    if (serialttc2->isOpen()){
-        writeDataTTC2(data);
-    }
+//    if (serialttc2->isOpen()){
+//        writeDataTTC2(data);
+//    }
 
     return;
 }
@@ -435,14 +481,16 @@ void MainWindow::uploadScript() {
             //Calc CRC
             const char* mychar = package.data();
             mychar+=2; //so the pointer points to pid
-            uint8_t crc = CRC8((uint8_t *)mychar,43);
+            uint8_t crc = CRC8((uint8_t *)mychar,46);
             package.append((char)crc);
 
             //Send to TTC1 only!
-            //if (serialttc1->isOpen()){
-            //    writeDataTTC1(package);
-            //}
-            ui->ttc1Console->putData(package);
+            if (serialttc1->isOpen()){
+                writeDataTTC1(package);
+                delay(3);
+            }
+            //ui->ttc1Console->putString("\npackage:\n");
+            //ui->ttc1Console->putData(package);
 
             index+=payload;
 
@@ -475,14 +523,15 @@ void MainWindow::uploadScript() {
             //Calc CRC
             const char* mychar = package.data();
             mychar+=2; //so the pointer points to pid
-            uint8_t crc = CRC8((uint8_t *)mychar,43);
+            uint8_t crc = CRC8((uint8_t *)mychar,46);
             package.append((char)crc);
 
             //Send to TTC1 only!
-            //if (serialttc1->isOpen()){
-            //    writeDataTTC1(package);
-            //}
-            ui->ttc1Console->putData(package);
+            if (serialttc1->isOpen()){
+                writeDataTTC1(package);
+            }
+            //ui->ttc1Console->putString("\npackage:\n");
+            //ui->ttc1Console->putData(package);
 
         }
 
@@ -682,37 +731,44 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
                 QByteArray responseData;
                 responseData.append((char)TTC_OP_GETTELEMETRY);
                 responseData.append((char)TTC_ACTION_ACK);
-                responseData.append(recordId);
+                //responseData.append(recordId);
 
-                //TODO - maybe we need the recordId also for CRC8???
                 char l_payload[4];
                 int l_size=0;
 
+                //we need the recordId also for CRC8!
+                l_payload[0] = recordId;
+
                 if (recordId == GT_TRX1_TMP){
-                    l_payload[0] = (char)60;
-                    l_size = 1;
-                }
-                else if (recordId == GT_TRX2_TMP){
-                    l_payload[0] = (char)50;
-                    l_size = 1;
-                }
-                else if (recordId == GT_TRX2_TMP){
-                    uint16_t rcntA = 40;
-                    uint16_t rcntB = 35;
-                    l_payload[0] = (char)(rcntA>>8); //upper
-                    l_payload[1] = (char)rcntA; //lower
-                    l_payload[2] = (char)(rcntB>>8); // upper
-                    l_payload[3] = (char)rcntB; //lower
-                    l_size = 4;
-                }
-                else if (recordId == GT_TRX2_TMP){
-                    l_payload[0] = (char)30;
-                    l_size = 1;
-                }
-                else if (recordId == GT_TRX2_TMP){
-                    l_payload[0] = (char)20;
-                    l_payload[1] = (char)10;
+                    l_payload[1] = (char)60;
                     l_size = 2;
+                }
+                else if (recordId == GT_TRX2_TMP){
+                    l_payload[1] = (char)50;
+                    l_size = 2;
+                }
+//                else if (recordId == GT_RST_COUNT){
+//                    uint16_t rcntA = 40;
+//                    uint16_t rcntB = 35;
+//                    l_payload[0] = (char)(rcntA>>8); //upper
+//                    l_payload[1] = (char)rcntA; //lower
+//                    l_payload[2] = (char)(rcntB>>8); // upper
+//                    l_payload[3] = (char)rcntB; //lower
+//                    l_size = 4;
+//                }
+                else if (recordId == GT_TEMP){
+                    l_payload[1] = (char)30;
+                    l_size = 2;
+                }
+//                else if (recordId == GT_STATUS){
+//                    l_payload[0] = (char)20;
+//                    l_payload[1] = (char)10;
+//                    l_size = 2;
+//                }
+                else if (recordId = GT_RSSI){
+                    l_payload[1] = (char)20;
+                    l_payload[2] = (char)10;
+                    l_size = 3;
                 }
 
                 uint8_t newcrc = CRC8((uint8_t*)l_payload,l_size);

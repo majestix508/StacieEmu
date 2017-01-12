@@ -187,7 +187,27 @@
          <widget class="QComboBox" name="quickBox">
           <item>
            <property name="text">
-            <string>STATUS TEST</string>
+            <string>GPS Show Loggerinfo</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GPS Show last wod</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GPS Erase Flash</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GPS Show Script Info</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>GPS Show Script Slot1</string>
            </property>
           </item>
          </widget>

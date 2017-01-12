@@ -1,0 +1,21 @@
+Script_LEN:
+0037
+Script_HDR:
+596FD5D0
+586FD5D0
+4312
+TimeTable:
+11 43 21           S1
+                   EOT
+ScriptSequences:
+S1:
+00 10 OBC_SU_ON    01 00 
+00 10 SU_BIAS_ON   01 01 
+02 10 SU_SCI       02 02 02
+00 10 SU_BIAS_OFF  01 03 
+00 10 SU_DUMP      01 04 
+00 10 OBC_SU_OFF   01 05 
+00 10 OBC_EOT      01 06
+XSUM:
+5D
+DB

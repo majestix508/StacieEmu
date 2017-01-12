@@ -20,9 +20,10 @@
 //GetTelemetry (OBC from TTC) RecordIds
 #define GT_TRX1_TMP  0x01
 #define GT_TRX2_TMP  0x02
-#define GT_RST_COUNT 0x03
+//#define GT_RST_COUNT 0x03
 #define GT_TEMP      0x04
-#define GETT_STATUS    0x05
+#define GT_STATUS    0x05
+#define GT_RSSI      0x06
 
 QT_BEGIN_NAMESPACE
 
@@ -103,6 +104,8 @@ private:
     QSerialPort *serialgps;
 
     QByteArray filecontent;
+
+    bool ttc1_inprogress;
 };
 
 #endif // MAINWINDOW_H

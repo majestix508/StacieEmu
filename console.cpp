@@ -68,8 +68,21 @@ void Console::putString(const QString &thestring)
 void Console::putData(const QByteArray &data)
 {
 
-    insertPlainText(QString(data.toPercentEncoding()));
-    //insertPlainText(QString(data.toHex()));
+    //insertPlainText(QString(data.toPercentEncoding()));
+    QString l_text = QString(data.toHex());
+    QString l_new;
+    int x=0;
+    for(int i=0; i<l_text.length();i++){
+        l_new.append(l_text[i]);
+        if (x==1){
+            l_new.append(" ");
+            x=0;
+        }
+        else{
+        x++;
+        }
+    }
+    insertPlainText(l_new);
 
     QScrollBar *bar = verticalScrollBar();
     bar->setValue(bar->maximum());
