@@ -416,6 +416,72 @@ void MainWindow::sendQuickCommand() {
             writeDataGPS(data);
         }
     }
+    else if (selectedText == "GPS Show Script Slot2"){
+        data = "$C,10004,1,1*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot3"){
+        data = "$C,10004,1,2*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot4"){
+        data = "$C,10004,1,3*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot5"){
+        data = "$C,10004,1,4*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot6"){
+        data = "$C,10004,1,5*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script Slot7"){
+        data = "$C,10004,1,6*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script SM Slot1"){
+        data = "$C,10004,1,7*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script SM Slot2"){
+        data = "$C,10004,1,8*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script SM Slot3"){
+        data = "$C,10004,1,9*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script SM Slot4"){
+        data = "$C,10004,1,10*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "GPS Show Script SM Slot5"){
+        data = "$C,10004,1,11*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
 
 //    if (serialttc1->isOpen()){
 //        writeDataTTC1(data);
@@ -440,9 +506,15 @@ void MainWindow::uploadScript() {
         content = file.readAll();
         file.close();
 
+        //Get Script Slot
+        QString myslot = ui->slotBox->currentText();
+        int selected_slot = myslot.toInt();
         //Stacie Packetaufbau:
         //<cmd><action><pid><destination><packageNum><raw-data><crc8>
         //RECEIVE,EXEC,0x00(ignored),0x01(sciencescript),(1-x letztes 0xFF),{1. Packet hat slot am Anfang!}daten,CRC8 1byte
+        //new syntax!!!
+        //RECEIVE,EXEC,0x11,0x01(sciencescript),(1-x letztes 0xFF),{1. Packet hat slot am Anfang!}daten,CRC8 1byte
+        // pid = type of upload, destination=length of data in packet,packnum=1.n last 0xff
 
         QByteArray package;
         uint8_t i = 1;
@@ -451,15 +523,21 @@ void MainWindow::uploadScript() {
         int rest = (content.size()+1) % 43; //+1 = scriptslot!
         int packages = (content.size()+1) / 43; //+1 = scriptslot!
 
+        int pkg_count = packages;
+        if (rest>0)
+            pkg_count++;
+
         while(true){
 
             package.clear();
             package.append((char)0x1E); //RECEIVE
             package.append((char)0x4B); //EXEC
-            package.append((char)0xFF); //PID
-            package.append((char)0x01); //destination -> science script
+            package.append((char)0x11); //PID == destination science script 0x11
+            package.append((char)pkg_count); // number of packages (if this is not the last package!)
+
             if (i == packages && rest==0){
                 //last full package
+                package[3] = (char)rest;
                 package.append((char)0xFF);
             }
             else {
@@ -469,7 +547,7 @@ void MainWindow::uploadScript() {
             int payload=43;
 
             if (first_run){
-                package.append((char)0x01); //Script Slot 1
+                package.append((char)selected_slot); //Script Slot
                 first_run=false;
                 payload=42;
             }
@@ -506,11 +584,10 @@ void MainWindow::uploadScript() {
             package.clear();
             package.append((char)0x1E); //RECEIVE
             package.append((char)0x4B); //EXEC
-            package.append((char)0xFF); //PID
-            package.append((char)0x01); //destination -> science script
+            package.append((char)0x11); //PID
+            package.append((char)rest); //destination -> length of the data!
             package.append((char)0xFF); //last Package
 
-            //TODO -> stacie weiß nun nicht wo das letzte Packet aufhört im OBC-Code!!
             for(int y =0; y<43;y++){
                 if (y<rest){
                     package.append(content[index+y]);
