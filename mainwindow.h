@@ -84,6 +84,7 @@ private slots:
 
     void autorespondToCommands(QByteArray data, Uart name);
 
+    void WriteImageToFile(QByteArray data);
 private:
 
     void initActionsConnections();

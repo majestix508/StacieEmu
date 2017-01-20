@@ -202,6 +202,26 @@
           </item>
           <item>
            <property name="text">
+            <string>Start Image</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Show 1st Image</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Start Transmit</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Stop Transmit</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
             <string>GPS Show Script Info</string>
            </property>
           </item>
@@ -404,7 +424,7 @@
      <x>0</x>
      <y>0</y>
      <width>1131</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuDatei">

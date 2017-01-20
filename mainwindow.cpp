@@ -8,6 +8,7 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QTime>
+#include <QStringRef>
 
 //helper function for a sleep without blocking the threads!
 void delay(int sec)
@@ -368,7 +369,49 @@ void MainWindow::writeDataGPS(const QByteArray &data)
 void MainWindow::readDataGPS()
 {
     QByteArray data = serialgps->readAll();
+    WriteImageToFile(data);
     ui->gpsConsole->putString(QString(data));
+}
+
+void MainWindow::WriteImageToFile(QByteArray data)
+{
+    //OBC Output: OBC: Image <size 3byte> <hex data with space seperated>\n
+
+    QString myString(data);
+
+    //Check if string starts with "OBC: Image ";
+    QString subString=myString.mid(0,11);
+    if (subString != "OBC: Image "){
+        return;
+    }
+
+    //Get size
+    QString sizestr = myString.mid(11,3);
+    int size = sizestr.toInt();
+
+    if (!size)
+        return;
+
+    char l_arr[512];
+    int pos = 15; //first hex string
+
+    for(int i=0; i < size; i++){
+
+        QString hexstr = myString.mid(pos,2);
+        bool ok;
+        int hexint = hexstr.toInt(&ok,16);
+        l_arr[i] = (char) hexint;
+
+        pos+=3; //offset to next hex-string
+    }
+
+
+    QString filename="D:\\test.tif";
+    QFile file(filename);
+    if (file.open(QIODevice::WriteOnly)){
+        file.write((const char*)l_arr,size);
+    }
+    file.close();
 }
 
 void MainWindow::handleErrorGPS(QSerialPort::SerialPortError error)
@@ -478,6 +521,30 @@ void MainWindow::sendQuickCommand() {
     }
     else if (selectedText == "GPS Show Script SM Slot5"){
         data = "$C,10004,1,11*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "Start Transmit"){
+        data = "$C,10011,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "Stop Transmit"){
+        data = "$C,10012,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "Start Image"){
+        data = "$C,10010,0,0*\r";
+        if (serialgps->isOpen()){
+            writeDataGPS(data);
+        }
+    }
+    else if (selectedText == "Show 1st Image"){
+        data = "$C,10013,0,0*\r";
         if (serialgps->isOpen()){
             writeDataGPS(data);
         }
