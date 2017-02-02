@@ -47,8 +47,8 @@ signals:
 public:
     explicit Console(QWidget *parent = 0);
 
-    void putString(const QString &thestring);
-    void putData(const QByteArray &data);
+    void putString(const QString &thestring,int col=Qt::green);
+    void putData(const QByteArray &data, int col=Qt::green);
 
     void setLocalEchoEnabled(bool set);
 

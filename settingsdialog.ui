@@ -210,8 +210,21 @@
      </rect>
     </property>
     <property name="text">
-     <string>Automatically awnser 
+     <string>Automatically answer 
 GETTELEMETRY Requests</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="TransmitcheckBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>80</y>
+      <width>151</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Auto answer TRANSMIT</string>
     </property>
    </widget>
   </widget>

@@ -57,16 +57,25 @@ Console::Console(QWidget *parent)
     setReadOnly(true);
 }
 
-void Console::putString(const QString &thestring)
+void Console::putString(const QString &thestring,int col)
 {
+    QTextCharFormat tf;
+    tf = currentCharFormat();
+    tf.setForeground(QBrush((Qt::GlobalColor)col));
+    setCurrentCharFormat(tf);
+
     insertPlainText(thestring);
 
     QScrollBar *bar = verticalScrollBar();
     bar->setValue(bar->maximum());
 }
 
-void Console::putData(const QByteArray &data)
+void Console::putData(const QByteArray &data,int col)
 {
+    QTextCharFormat tf;
+    tf = currentCharFormat();
+    tf.setForeground(QBrush((Qt::GlobalColor)col));
+    setCurrentCharFormat(tf);
 
     //insertPlainText(QString(data.toPercentEncoding()));
     QString l_text = QString(data.toHex());

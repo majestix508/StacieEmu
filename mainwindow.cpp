@@ -10,6 +10,10 @@
 #include <QTime>
 #include <QStringRef>
 
+#include <iostream>
+
+using namespace std;
+
 //helper function for a sleep without blocking the threads!
 void delay(int sec)
 {
@@ -69,7 +73,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->uploadscriptButton, &QPushButton::clicked,this, &MainWindow::uploadScript);
 
+    ttc1buffer.clear();
+    ttc2buffer.clear();
+
     ttc1_inprogress=false;
+    ttc2_inprogress=false;
 }
 
 MainWindow::~MainWindow()
@@ -191,6 +199,12 @@ void MainWindow::closeSerialPort()
     ui->actionDisconnect->setEnabled(false);
     ui->actionSettings->setEnabled(true);
     showStatusMessage(tr("Disconnected"));
+
+    ttc1buffer.clear();
+    ttc2buffer.clear();
+
+    ttc1_inprogress=false;
+    ttc2_inprogress=false;
 }
 
 void MainWindow::about()
@@ -287,13 +301,107 @@ void MainWindow::writeDataTTC1(const QByteArray &data)
     ttc1_inprogress=true;
 
     QString infoLine = WriteDescription(data,true);
-    ui->ttc1Console->putString(infoLine);
-    ui->ttc1Console->putData(data);
-    ui->ttc1Console->putString("\n");
+    ui->ttc1Console->putString(infoLine,Qt::green);
+    ui->ttc1Console->putData(data,Qt::green);
+    ui->ttc1Console->putString("\n",Qt::green);
 
     serialttc1->write(data);
 
     ttc1_inprogress=false;
+}
+
+int MainWindow::check_and_parse_buffer(QByteArray arr)
+{
+    //check if stacie-package is complete!
+
+    char cmdid=(char)0x00; //0x00 = not available!!!
+    char action=(char)0xFF; // 0xFF = not available!!!
+
+    bool cmd_action=false;
+
+    for(int i=0;i<arr.size();i++){
+
+        if (i==0){
+            if (arr[i] == (char)TTC_OP_TRANSMIT){
+                cmdid = (char)TTC_OP_TRANSMIT;
+            }
+            else if (arr[i] == (char)TTC_OP_RECEIVE) {
+                cmdid = (char)TTC_OP_RECEIVE;
+            }
+            else if (arr[i] == (char)TTC_OP_OPMODE) {
+                cmdid = (char)TTC_OP_OPMODE;
+            }
+            else if (arr[i] == (char)TTC_OP_GETTELEMETRY){
+                cmdid = (char)TTC_OP_GETTELEMETRY;
+            }
+            else {
+                return 0;
+            }
+        }
+        else if (i==1){
+            if (arr[i] == (char)TTC_ACTION_ACK){
+                action = (char)TTC_ACTION_ACK;
+            }
+            else if (arr[i] == (char)TTC_ACTION_EXEC){
+                action = (char)TTC_ACTION_EXEC;
+            }
+            else if (arr[i] == (char)TTC_ACTION_NACK){
+                action = (char)TTC_ACTION_NACK;
+            }
+            else {
+                return 0;
+            }
+            cmd_action=true;
+        }
+
+        if (cmd_action){
+            break;
+        }
+    }
+
+    if (cmdid == (char)TTC_OP_TRANSMIT && (action == (char)TTC_ACTION_ACK || action == (char)TTC_ACTION_NACK) ){
+        return 2; //command complete
+    }
+    else if (cmdid == (char)TTC_OP_RECEIVE && (action == (char)TTC_ACTION_ACK || action == (char)TTC_ACTION_NACK)){
+        return 2; //command complete
+    }
+    else if ( (cmdid == (char)TTC_OP_TRANSMIT || cmdid == (char)TTC_OP_RECEIVE) && action == (char)TTC_ACTION_EXEC){
+        //check if package is 49byte long!
+        if (arr.size() >=49){
+            return 49;
+        }
+        else {
+            if (arr.size()>=5){
+                if (arr[4] == (char)0xFF){
+                    int size = arr[3];
+                    cout << "lastpkg size:" << size << endl;
+                    return size+3;
+                }
+            }
+            return 0;
+        }
+    }
+    else if ( cmdid == (char)TTC_OP_GETTELEMETRY && action == (char)TTC_ACTION_EXEC){ //obc asks for telemetry
+        if (arr.size() >=4){
+            return 4;
+        }
+        else {
+            return 0;
+        }
+    }
+    else if (cmdid == (char)TTC_OP_OPMODE && action == (char)TTC_ACTION_EXEC) { //obc wants mode-change
+        if (arr.size()>=8){
+            return 8;
+        }
+        else {
+            return 0;
+        }
+    }
+    else if (cmdid == (char)TTC_OP_OPMODE && (action == (char)TTC_ACTION_ACK || action == (char)TTC_ACTION_NACK) ){ //obc says ok or not ok
+        return 2;
+    }
+
+    return 0;
 }
 
 void MainWindow::readDataTTC1()
@@ -303,15 +411,25 @@ void MainWindow::readDataTTC1()
     }
 
     ttc1_inprogress=true;
-    QByteArray data = serialttc1->readAll();
 
-    QString  infoLine = WriteDescription(data,false);
-    ui->ttc1Console->putString(QString(infoLine));
-    ui->ttc1Console->putData(data);
-    ui->ttc1Console->putString("\n");
+    ttc1buffer.append(serialttc1->readAll());
 
-    autorespondToCommands(data,TTC1);
+    int cmdsize = check_and_parse_buffer(ttc1buffer);
 
+    if (cmdsize){
+        QByteArray pkg_data;
+        for(int i=0;i<cmdsize;i++){
+            pkg_data.append(ttc1buffer[i]);
+        }
+        ttc1buffer.remove(0,cmdsize);
+
+        QString  infoLine = WriteDescription(pkg_data,false);
+        ui->ttc1Console->putString(QString(infoLine),Qt::red);
+        ui->ttc1Console->putData(pkg_data,Qt::red);
+        ui->ttc1Console->putString("\n",Qt::red);
+        ttc1_inprogress=false;
+        autorespondToCommands(pkg_data,TTC1);
+    }
     ttc1_inprogress=false;
 }
 
@@ -327,24 +445,48 @@ void MainWindow::handleErrorTTC1(QSerialPort::SerialPortError error)
 
 void MainWindow::writeDataTTC2(const QByteArray &data)
 {
+    while (ttc2_inprogress){
+        delay(1);
+    }
+
+    ttc2_inprogress=true;
+
     QString infoLine = WriteDescription(data,true);
-    ui->ttc2Console->putString(infoLine);
-    ui->ttc2Console->putData(data);
-    ui->ttc2Console->putString("\n");
+    ui->ttc2Console->putString(infoLine,Qt::green);
+    ui->ttc2Console->putData(data,Qt::green);
+    ui->ttc2Console->putString("\n",Qt::green);
 
     serialttc2->write(data);
+
+    ttc2_inprogress=false;
 }
 
 void MainWindow::readDataTTC2()
 {
-    QByteArray data = serialttc2->readAll();
+    while (ttc2_inprogress){
+        delay(1);
+    }
 
-    QString  infoLine = WriteDescription(data,false);
-    ui->ttc2Console->putString(QString(infoLine));
-    ui->ttc2Console->putData(data);
-    ui->ttc2Console->putString("\n");
+    ttc2_inprogress=true;
+    ttc2buffer.append(serialttc2->readAll());
 
-    autorespondToCommands(data,TTC2);
+    int cmdsize = check_and_parse_buffer(ttc2buffer);
+
+    if (cmdsize){
+        QByteArray pkg_data;
+        for(int i=0;i<cmdsize;i++){
+            pkg_data.append(ttc2buffer[i]);
+        }
+        ttc2buffer.remove(0,cmdsize);
+
+        QString  infoLine = WriteDescription(pkg_data,false);
+        ui->ttc2Console->putString(QString(infoLine),Qt::red);
+        ui->ttc2Console->putData(pkg_data,Qt::red);
+        ui->ttc2Console->putString("\n",Qt::red);
+        ttc2_inprogress=false;
+        autorespondToCommands(pkg_data,TTC2);
+    }
+    ttc2_inprogress=false;
 }
 
 void MainWindow::handleErrorTTC2(QSerialPort::SerialPortError error)
@@ -361,16 +503,16 @@ void MainWindow::writeDataGPS(const QByteArray &data)
 {
     serialgps->write(data);
 
-    ui->gpsConsole->putString("Command: ");
-    ui->gpsConsole->putData(data);
-    ui->gpsConsole->putString("\n");
+    ui->gpsConsole->putString("Command: ",Qt::white);
+    ui->gpsConsole->putData(data,Qt::white);
+    ui->gpsConsole->putString("\n",Qt::white);
 }
 
 void MainWindow::readDataGPS()
 {
     QByteArray data = serialgps->readAll();
     WriteImageToFile(data);
-    ui->gpsConsole->putString(QString(data));
+    ui->gpsConsole->putString(QString(data),Qt::yellow);
 }
 
 void MainWindow::WriteImageToFile(QByteArray data)
@@ -854,71 +996,87 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
 
     SettingsDialog::Settings p = settings->settings();
 
-    if (!p.telemetry_awnser){
+    if (!p.telemetry_answer){
         return;
     }
 
-    int index=0;
-    while(index<data.size()){
+    if (p.telemetry_answer){
+        int index=0;
+        while(index<data.size()){
 
-        if (data[index] == (char)TTC_OP_GETTELEMETRY){
-            if (data.size() >= index+4 && data[index+1] == (char)TTC_ACTION_EXEC){
-                char recordId = data[index+2];
-                char crc = data[index+3];
+            if (data[index] == (char)TTC_OP_GETTELEMETRY){
+                if (data.size() >= index+4 && data[index+1] == (char)TTC_ACTION_EXEC){
+                    char recordId = data[index+2];
+                    char crc = data[index+3];
 
-                //Check Crc
-                uint8_t mycrc = CRC8((uint8_t*)&crc,1);
-                if (crc != mycrc){
-                    //TODO - send NACK?
+                    //Check Crc
+                    uint8_t mycrc = CRC8((uint8_t*)&recordId,1);
+                    if (crc != mycrc){
+                        //TODO - send NACK?
+                    }
+
+                    QByteArray responseData;
+                    responseData.append((char)TTC_OP_GETTELEMETRY);
+                    responseData.append((char)TTC_ACTION_ACK);
+                    //responseData.append(recordId);
+
+                    char l_payload[4];
+                    int l_size=0;
+
+                    //we need the recordId also for CRC8!
+                    l_payload[0] = recordId;
+
+                    if (recordId == GT_TRX1_TMP){
+                        l_payload[1] = (char)60;
+                        l_size = 2;
+                    }
+                    else if (recordId == GT_TRX2_TMP){
+                        l_payload[1] = (char)50;
+                        l_size = 2;
+                    }
+                    else if (recordId == GT_TEMP){
+                        l_payload[1] = (char)30;
+                        l_size = 2;
+                    }
+                    else if (recordId == GT_RSSI){
+                        l_payload[1] = (char)20;
+                        l_payload[2] = (char)10;
+                        l_size = 3;
+                    }
+
+                    uint8_t newcrc = CRC8((uint8_t*)l_payload,l_size);
+
+                    responseData.append(l_payload,l_size);
+                    responseData.append(newcrc);
+
+                    if (name == TTC1){
+                        writeDataTTC1(responseData);
+                    }
+                    else if (name == TTC2){
+                        writeDataTTC2(responseData);
+                    }
+                    else if (name == GPS) {
+                        writeDataGPS(responseData);
+                    }
+
+                    index +=4; //set to next position
+                    continue;
                 }
+            }
 
+            index++;
+        }
+    }//telemetry answer
+
+
+    if (p.transmit_answer){
+
+        if (data.size() >2){
+
+            if (data[0] == (char)TTC_OP_TRANSMIT && data[1] == (char)TTC_ACTION_EXEC){
                 QByteArray responseData;
                 responseData.append((char)TTC_OP_GETTELEMETRY);
                 responseData.append((char)TTC_ACTION_ACK);
-                //responseData.append(recordId);
-
-                char l_payload[4];
-                int l_size=0;
-
-                //we need the recordId also for CRC8!
-                l_payload[0] = recordId;
-
-                if (recordId == GT_TRX1_TMP){
-                    l_payload[1] = (char)60;
-                    l_size = 2;
-                }
-                else if (recordId == GT_TRX2_TMP){
-                    l_payload[1] = (char)50;
-                    l_size = 2;
-                }
-//                else if (recordId == GT_RST_COUNT){
-//                    uint16_t rcntA = 40;
-//                    uint16_t rcntB = 35;
-//                    l_payload[0] = (char)(rcntA>>8); //upper
-//                    l_payload[1] = (char)rcntA; //lower
-//                    l_payload[2] = (char)(rcntB>>8); // upper
-//                    l_payload[3] = (char)rcntB; //lower
-//                    l_size = 4;
-//                }
-                else if (recordId == GT_TEMP){
-                    l_payload[1] = (char)30;
-                    l_size = 2;
-                }
-//                else if (recordId == GT_STATUS){
-//                    l_payload[0] = (char)20;
-//                    l_payload[1] = (char)10;
-//                    l_size = 2;
-//                }
-                else if (recordId == GT_RSSI){
-                    l_payload[1] = (char)20;
-                    l_payload[2] = (char)10;
-                    l_size = 3;
-                }
-
-                uint8_t newcrc = CRC8((uint8_t*)l_payload,l_size);
-
-                responseData.append(l_payload,l_size);
-                responseData.append(newcrc);
 
                 if (name == TTC1){
                     writeDataTTC1(responseData);
@@ -929,13 +1087,10 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
                 else if (name == GPS) {
                     writeDataGPS(responseData);
                 }
-
-                index +=4; //set to next position
-                continue;
             }
         }
 
-        index++;
-    }
+    }//transmit answer
+
     return;
 }

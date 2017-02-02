@@ -7,7 +7,6 @@
 
 // Stacie functions
 #define TTC_OP_TRANSMIT     0x07
-#define TTC_OP_GETSTATUS    0x19
 #define TTC_OP_RECEIVE      0x1E
 #define TTC_OP_OPMODE       0x2A
 #define TTC_OP_GETTELEMETRY 0x2D
@@ -24,6 +23,42 @@
 #define GT_TEMP      0x04
 #define GT_STATUS    0x05
 #define GT_RSSI      0x06
+
+// Stacie Transmit packet sizes
+#define TTC_TRANSMIT_PAYLOAD_DATA_SIZE 43 //43 bytes of plain data
+#define TTC_TRANSMIT_PAYLOAD_FULL_SIZE 46 //46 bytes of payload including pid, source and destination
+#define TTC_TRANSMIT_FULL_PACKET_SIZE  49 //46 bytes of full payload, commandId, actionId, crc8
+
+
+// Beacon PID - Downlink format PID -  CALLSIGN(6) - 39 Byte fixed Payload.
+#define TTC_PID_DATATYPE_BEACON1         0x53
+#define TTC_PID_DATATYPE_BEACON2         0x56
+
+// PID for Downlink format PID - size/len -  PackNr - 43 byte data
+#define TTC_PID_DATATYPE_CUSTOM         0x50	// If this is used, the cointent must be further Identifiaby by Id or something...
+#define TTC_PID_DATATYPE_SCIENCEDATA    0x51
+#define TTC_PID_DATATYPE_HOUSEKEEPING   0x52
+#define TTC_PID_DATATYPE_IMAGES         0x54
+#define TTC_PID_DATATYPE_ADCS_DOWNLINK  0x55	// ADCS Downlink Data (3 packages of internal values in binary format)
+
+// PID for Uplink format PID - size/len -  PackNr - 43 byte data
+#define TTC_REC_PID_SCIENCE_SCRIPT	0x11 	//Pid for receive science-scripts
+#define TTC_REC_PID_SINGLE_CMD		0x12 	//Pid for single command
+#define TTC_REC_PID_ADCS_UPLINK		0x13 	//Pid for adcs uplink data (used to send GPS fixes and sync the RTC on board)
+#define TTC_REC_PID_CMD_SCRIPT		0x14 	//Pid for command scripts
+#define TTC_REC_PID_LOGGER_RAWDDL	0x15 	//Pid for triggering Raw data Downlink. The package contains page pointer to Flash
+
+
+//#define TTC_TELEMETRY_POSITION			 0
+//#define TTC_TELEMETRY_TIME               1
+
+#define TTC_TELEMETRY_TRX1_TEMP	         1
+#define TTC_TELEMETRY_TRX2_TEMP			 2
+//#define TTC_TELEMETRY_RST_COUNT          3
+#define TTC_TELEMETRY_MODE              4
+//#define TTC_TELEMETRY_STATUS             5
+#define TTC_TELEMETRY_RSSI               6
+
 
 QT_BEGIN_NAMESPACE
 
@@ -85,6 +120,9 @@ private slots:
     void autorespondToCommands(QByteArray data, Uart name);
 
     void WriteImageToFile(QByteArray data);
+
+    int check_and_parse_buffer(QByteArray arr);
+
 private:
 
     void initActionsConnections();
@@ -104,9 +142,14 @@ private:
     QSerialPort *serialttc2;
     QSerialPort *serialgps;
 
+
     QByteArray filecontent;
 
+    QByteArray ttc1buffer;
+    QByteArray ttc2buffer;
+
     bool ttc1_inprogress;
+    bool ttc2_inprogress;
 };
 
 #endif // MAINWINDOW_H
