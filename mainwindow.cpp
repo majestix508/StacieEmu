@@ -9,7 +9,8 @@
 #include <QTextStream>
 #include <QTime>
 #include <QStringRef>
-
+#include <QDateTime>
+#include <QDateTimeEdit>
 #include <iostream>
 
 using namespace std;
@@ -278,12 +279,15 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
     }
 
     QString result;
+    QDateTime dt = QDateTime::currentDateTime();
+    result = dt.toString( "hh:mm:ss" );
+    result +=": ";
 
     if (toOBC){
-        result= "TTC->OBC: ";
+        result+= "TTC->OBC: ";
     }
     else {
-        result= "OBC->TTC: ";
+        result+= "OBC->TTC: ";
     }
     result += cmdId + " " + actionId + "\n";
 
@@ -996,10 +1000,6 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
 
     SettingsDialog::Settings p = settings->settings();
 
-    if (!p.telemetry_answer){
-        return;
-    }
-
     if (p.telemetry_answer){
         int index=0;
         while(index<data.size()){
@@ -1075,7 +1075,7 @@ void MainWindow::autorespondToCommands(QByteArray data,Uart name){
 
             if (data[0] == (char)TTC_OP_TRANSMIT && data[1] == (char)TTC_ACTION_EXEC){
                 QByteArray responseData;
-                responseData.append((char)TTC_OP_GETTELEMETRY);
+                responseData.append((char)TTC_OP_TRANSMIT);
                 responseData.append((char)TTC_ACTION_ACK);
 
                 if (name == TTC1){
