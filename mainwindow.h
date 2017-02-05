@@ -77,6 +77,7 @@ class MainWindow;
 }
 
 class SettingsDialog;
+class DDLDialog;
 
 class MainWindow : public QMainWindow
 {
@@ -123,6 +124,7 @@ private slots:
 
     int check_and_parse_buffer(QByteArray arr);
 
+    void startDDL();
 private:
 
     void initActionsConnections();
@@ -137,6 +139,7 @@ private:
     Ui::MainWindow *ui;
     QLabel *status;
     SettingsDialog *settings;
+    DDLDialog *ddl;
 
     QSerialPort *serialttc1;
     QSerialPort *serialttc2;

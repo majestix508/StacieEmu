@@ -58,6 +58,13 @@
           </property>
          </widget>
         </item>
+        <item row="3" column="1">
+         <widget class="QPushButton" name="cFileBtn">
+          <property name="text">
+           <string>Select File</string>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
@@ -65,10 +72,10 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
-         <widget class="QPushButton" name="cFileBtn">
+        <item row="13" column="1">
+         <widget class="QLabel" name="label_12">
           <property name="text">
-           <string>Select File</string>
+           <string/>
           </property>
          </widget>
         </item>
@@ -109,20 +116,6 @@
           </item>
          </widget>
         </item>
-        <item row="12" column="1">
-         <widget class="QLabel" name="label_12">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_11">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
         <item row="5" column="1">
          <widget class="QLabel" name="cFileLbl">
           <property name="text">
@@ -130,14 +123,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Action:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="1">
+        <item row="15" column="1">
          <widget class="QPushButton" name="quickButton">
           <property name="text">
            <string>Send</string>
@@ -151,26 +137,21 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="actionBox">
-          <item>
-           <property name="text">
-            <string>ACK</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>EXEC</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>NACK</string>
-           </property>
-          </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Action:</string>
+          </property>
          </widget>
         </item>
-        <item row="13" column="0">
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+        <item row="14" column="0">
          <widget class="QLabel" name="label_8">
           <property name="font">
            <font>
@@ -183,7 +164,7 @@
           </property>
          </widget>
         </item>
-        <item row="14" column="0">
+        <item row="15" column="0">
          <widget class="QComboBox" name="quickBox">
           <item>
            <property name="text">
@@ -287,6 +268,32 @@
           </item>
          </widget>
         </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="actionBox">
+          <item>
+           <property name="text">
+            <string>ACK</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>EXEC</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>NACK</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="12" column="1">
+         <widget class="QPushButton" name="uploadscriptButton">
+          <property name="text">
+           <string>Upload Script</string>
+          </property>
+         </widget>
+        </item>
         <item row="5" column="0">
          <widget class="QPushButton" name="clearFileBtn">
           <property name="text">
@@ -294,14 +301,14 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="1">
-         <widget class="QPushButton" name="uploadscriptButton">
+        <item row="11" column="0">
+         <widget class="QLabel" name="label_7">
           <property name="text">
-           <string>Upload Script</string>
+           <string>Script Slot:</string>
           </property>
          </widget>
         </item>
-        <item row="11" column="0">
+        <item row="12" column="0">
          <widget class="QComboBox" name="slotBox">
           <item>
            <property name="text">
@@ -365,10 +372,10 @@
           </item>
          </widget>
         </item>
-        <item row="10" column="0">
-         <widget class="QLabel" name="label_7">
+        <item row="9" column="1">
+         <widget class="QPushButton" name="ddlButton">
           <property name="text">
-           <string>Script Slot:</string>
+           <string>Logger DDL Upload</string>
           </property>
          </widget>
         </item>
@@ -465,6 +472,7 @@
    <addaction name="actionDisconnect"/>
    <addaction name="separator"/>
    <addaction name="actionSettings"/>
+   <addaction name="actionDDL"/>
    <addaction name="actionClear"/>
    <addaction name="actionExit"/>
   </widget>
@@ -581,6 +589,18 @@
   <action name="actionSave_GPS">
    <property name="text">
     <string>save GPS</string>
+   </property>
+  </action>
+  <action name="actionDDL">
+   <property name="icon">
+    <iconset resource="stacieemu.qrc">
+     <normaloff>:/images/ddl.ico</normaloff>:/images/ddl.ico</iconset>
+   </property>
+   <property name="text">
+    <string>DDL</string>
+   </property>
+   <property name="toolTip">
+    <string>Dialog for DDL</string>
    </property>
   </action>
  </widget>

@@ -16,14 +16,17 @@ RC_ICONS = emu.ico
 SOURCES += main.cpp\
         mainwindow.cpp \
     settingsdialog.cpp \
-    console.cpp
+    console.cpp \
+    ddldialog.cpp
 
 HEADERS  += mainwindow.h \
     settingsdialog.h \
-    console.h
+    console.h \
+    ddldialog.h
 
 FORMS    += mainwindow.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    ddldialog.ui
 
 RESOURCES += \
     stacieemu.qrc

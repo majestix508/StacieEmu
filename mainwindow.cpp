@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ddldialog.h"
 #include "settingsdialog.h"
 
 #include <QMessageBox>
@@ -12,6 +13,7 @@
 #include <QDateTime>
 #include <QDateTimeEdit>
 #include <iostream>
+#include <QDebug>
 
 using namespace std;
 
@@ -30,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     settings = new SettingsDialog;
+    ddl = new DDLDialog;
 
     serialttc1 = new QSerialPort(this);
     serialttc2 = new QSerialPort(this);
@@ -74,6 +77,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->uploadscriptButton, &QPushButton::clicked,this, &MainWindow::uploadScript);
 
+    connect(ui->ddlButton, &QPushButton::clicked,this, &MainWindow::startDDL);
+
     ttc1buffer.clear();
     ttc2buffer.clear();
 
@@ -85,6 +90,7 @@ MainWindow::~MainWindow()
 {
     delete ui;
     delete settings;
+    delete ddl;
 }
 
 void MainWindow::openSerialPort()
@@ -155,7 +161,7 @@ void MainWindow::openSerialPort()
     if (gps_enabled==true || ttc1_enabled==true || ttc2_enabled==true){
         ui->actionConnect->setEnabled(false);
         ui->actionDisconnect->setEnabled(true);
-        ui->actionSettings->setEnabled(false);
+        //ui->actionSettings->setEnabled(false);
     }
     else {
         QMessageBox::critical(this, tr("No vaild port configured"), tr("Please configure a valid port"));
@@ -220,6 +226,7 @@ void MainWindow::initActionsConnections()
     connect(ui->actionConnect, &QAction::triggered, this, &MainWindow::openSerialPort);
     connect(ui->actionDisconnect, &QAction::triggered, this, &MainWindow::closeSerialPort);
     connect(ui->actionSettings, &QAction::triggered, settings, &SettingsDialog::show);
+    connect(ui->actionDDL, &QAction::triggered, ddl, &DDLDialog::show);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::about);
     connect(ui->actionClear, &QAction::triggered, this, &MainWindow::clearConsoles);
 
@@ -292,6 +299,134 @@ QString MainWindow::WriteDescription(const QByteArray &data, bool toOBC)
     result += cmdId + " " + actionId + "\n";
 
     return result;
+}
+
+void MainWindow::startDDL()
+{
+    QString content = ddl->getContent();
+
+    if (!content.size()){
+        return;
+    }
+    //qDebug() << "startDDL..." << endl;
+    QStringList list = content.split(QRegExp("[\r\n]"),QString::SkipEmptyParts);
+
+    QByteArray receivedata;
+
+    for (QStringList::iterator it = list.begin();
+         it != list.end(); ++it) {
+         QString current = *it;
+         //qDebug() << "[[" << current << "]]";
+
+         if (current[0] == 'R'){
+             QString str_range = current.mid(1);
+             //qDebug() << "str_range:" << str_range << endl;
+             QStringList adr_list = str_range.split(',');
+             //qDebug() << "adr_list size:" << adr_list.size() << endl;
+             if (adr_list.size() == 2){
+                 QString str_from = adr_list[0];
+                 QString str_to = adr_list[1];
+                 uint32_t from = str_from.toInt();
+                 uint32_t to = str_to.toInt();
+
+                 //qDebug()<< "from:" << from << " to:" << to << endl;
+                 //Create add data!
+                 receivedata.append('R');
+
+                 uint8_t *c = (uint8_t *)&from;
+                 for(int i=0;i<4;i++){
+                     //cout << "from:" << std::hex << c << endl;
+                     //qDebug() << "loop1" << endl;
+                     receivedata.append(*c);
+                     c+=1;
+                 }
+                 uint8_t *d = (uint8_t *)&to;
+                 for(int i=0;i<4;i++){
+                     //cout << "to:" << std::hex << d << endl;
+                     //qDebug() << "loop2" << endl;
+                     receivedata.append(*d);
+                     d+=1;
+                 }
+                 //qDebug() << "data size:" << receivedata.length() << endl;
+             }
+         }
+         else if (current[0] == 'P'){
+             QString str_adr = current.mid(1);
+             if (str_adr.size()>0){
+                 uint32_t adr = str_adr.toInt();
+                 receivedata.append('P');
+                 uint8_t *c = (uint8_t *)&adr;
+                 for(int i=0;i<4;i++){
+                     receivedata.append(*c);
+                     c+=1;
+                 }
+             }
+         }
+    }
+
+    if (receivedata.size()){
+        //calc stacie-packages
+        uint8_t packages=0;
+        packages = receivedata.size()/43;
+        if (receivedata.size()%43){
+            packages++;
+        }
+
+        char *mydata = receivedata.data();
+
+        uint8_t pkg_count = 1;
+        for(int i=0;i<packages;i++){
+            QByteArray pkg;
+            pkg.append(TTC_OP_RECEIVE);
+            pkg.append(TTC_ACTION_EXEC);
+            pkg.append(TTC_REC_PID_LOGGER_RAWDDL);
+            uint8_t length=43;
+            if ( (i+1) == packages){//last pkg
+                length = receivedata.size()%43;
+                //qDebug() << "length:" << length << endl;
+                //qDebug() << "length data:" << receivedata.size() << endl;
+                pkg.append((char)length);
+                pkg.append((char)0xFF); //last package
+            }
+            else {
+                pkg.append((char)packages);
+                pkg.append((char)pkg_count);
+            }
+
+            for(int x=0;x<length;x++){
+                pkg.append(*mydata);
+                mydata++;
+            }
+
+            //Fill up package
+            if (length<43){
+                //Fill with HF friendly 0xAA;
+                for(int d=0;d<(43-length);d++){
+                    pkg.append((char)0xAA);
+                }
+            }
+
+            //Calc CRC
+            const char* mychar = pkg.data();
+            mychar+=2; //so the pointer points to pid
+            uint8_t crc = CRC8((uint8_t *)mychar,46);
+            pkg.append((char)crc);
+
+            //send data
+            if (serialttc1->isOpen()){
+                writeDataTTC1(pkg);
+            }
+
+            if (serialttc2->isOpen()){
+                writeDataTTC2(pkg);
+            }
+
+            pkg_count++;
+        }
+
+
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
