@@ -878,6 +878,11 @@ void MainWindow::uploadScript() {
         while(true){
 
             package.clear();
+
+            if (packages==0 && rest>0){
+                break;
+            }
+
             package.append((char)0x1E); //RECEIVE
             package.append((char)0x4B); //EXEC
             package.append((char)0x11); //PID == destination science script 0x11
